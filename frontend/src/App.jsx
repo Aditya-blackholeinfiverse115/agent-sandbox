@@ -12,7 +12,7 @@ function App() {
 
   return (
     <div className="container">
-      <h1>🧠 Agent Sandbox UI</h1>
+      <h1>🧠 Agent Sandbox</h1>
 
       <div className="governance-toggle">
         <label>
