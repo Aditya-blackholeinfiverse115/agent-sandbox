@@ -1,7 +1,8 @@
-import React from "react";
+import React, { useState } from "react";
 
 const AgentCard = ({ agent, isSelected, onToggle, isRefused }) => {
   const isDisabled = agent.status === "Disabled";
+  const [showWhy, setShowWhy] = useState(false);
 
   const handleClick = () => {
     if (!isDisabled && !isRefused) {
@@ -9,13 +10,16 @@ const AgentCard = ({ agent, isSelected, onToggle, isRefused }) => {
     }
   };
 
+  const toggleWhy = (e) => {
+    e.stopPropagation(); // Prevent selecting agent when clicking transparency
+    setShowWhy(!showWhy);
+  };
+
   return (
     <div
-      className={`card 
-        ${isSelected ? "selected" : ""} 
-        ${isDisabled ? "disabled" : ""} 
-        ${isRefused ? "governance-refused" : ""}
-      `}
+      className={`card ${isSelected ? "selected" : ""} 
+      ${isDisabled ? "disabled" : ""} 
+      ${isRefused ? "governance-refused" : ""}`}
       onClick={handleClick}
     >
       <h3>{agent.name}</h3>
@@ -32,6 +36,17 @@ const AgentCard = ({ agent, isSelected, onToggle, isRefused }) => {
         <span className="load">Load: {agent.load}%</span>
       </div>
 
+      {/* Transparency Toggle */}
+      <div className="why-toggle" onClick={toggleWhy}>
+        {showWhy ? "▲ Hide explanation" : "▼ Why this agent exists"}
+      </div>
+
+      {showWhy && (
+        <div className="why-section">
+          {agent.why_exists}
+        </div>
+      )}
+
       {isDisabled && (
         <div className="refusal">
           ⚠ {agent.refusal_reason}
@@ -44,8 +59,6 @@ const AgentCard = ({ agent, isSelected, onToggle, isRefused }) => {
           Not eligible in current context
         </div>
       )}
-    
-    
     </div>
   );
 };
