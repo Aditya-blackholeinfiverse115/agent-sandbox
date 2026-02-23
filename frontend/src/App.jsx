@@ -36,6 +36,7 @@ function App() {
       <SelectionBucket
         selectedAgents={selectedAgents}
         setSelectedAgents={setSelectedAgents}
+        isGovernanceRefused={simulateRefusal}
       />
 
       <h2>Chain Visualization</h2>

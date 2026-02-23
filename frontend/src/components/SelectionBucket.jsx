@@ -11,14 +11,17 @@ import {
 } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
 
-const SortableItem = ({ agent, onRemove }) => {
+const SortableItem = ({ agent, onRemove, isGovernanceRefused }) => {
   const {
     attributes,
     listeners,
     setNodeRef,
     transform,
     transition,
-  } = useSortable({ id: agent.id });
+  } = useSortable({
+    id: agent.id,
+    disabled: isGovernanceRefused, // 🔒 Disable drag when refused
+  });
 
   const style = {
     transform: CSS.Transform.toString(transform),
@@ -29,14 +32,18 @@ const SortableItem = ({ agent, onRemove }) => {
     <div
       ref={setNodeRef}
       style={style}
-      className="bucket-item"
+      className={`bucket-item ${isGovernanceRefused ? "locked" : ""}`}
       {...attributes}
     >
       {/* Drag Handle */}
       <div
-        {...listeners}
+        {...(!isGovernanceRefused ? listeners : {})}
         className="drag-handle"
-        style={{ cursor: "grab", marginRight: "10px" }}
+        style={{
+          cursor: isGovernanceRefused ? "not-allowed" : "grab",
+          marginRight: "10px",
+          opacity: isGovernanceRefused ? 0.4 : 1,
+        }}
       >
         ☰
       </div>
@@ -47,8 +54,13 @@ const SortableItem = ({ agent, onRemove }) => {
       </div>
 
       <button
-        onClick={() => onRemove(agent.id)}
+        onClick={() => !isGovernanceRefused && onRemove(agent.id)}
         type="button"
+        disabled={isGovernanceRefused}
+        style={{
+          opacity: isGovernanceRefused ? 0.5 : 1,
+          cursor: isGovernanceRefused ? "not-allowed" : "pointer",
+        }}
       >
         ✕
       </button>
@@ -56,9 +68,15 @@ const SortableItem = ({ agent, onRemove }) => {
   );
 };
 
-const SelectionBucket = ({ selectedAgents, setSelectedAgents }) => {
+const SelectionBucket = ({
+  selectedAgents,
+  setSelectedAgents,
+  isGovernanceRefused, // 🔥 New prop
+}) => {
 
   const handleDragEnd = (event) => {
+    if (isGovernanceRefused) return; // 🔒 Block reorder
+
     const { active, over } = event;
 
     if (!over || active.id === over.id) return;
@@ -76,14 +94,22 @@ const SelectionBucket = ({ selectedAgents, setSelectedAgents }) => {
   };
 
   const removeAgent = (id) => {
+    if (isGovernanceRefused) return; // 🔒 Block removal
+
     setSelectedAgents((items) =>
       items.filter((a) => a.id !== id)
     );
   };
 
   return (
-    <div className="bucket">
+    <div className={`bucket ${isGovernanceRefused ? "bucket-locked" : ""}`}>
       <h2>🪣 Agent Selection Bucket</h2>
+
+      {isGovernanceRefused && (
+        <div className="bucket-warning">
+          🚫 Governance active — bucket interaction locked
+        </div>
+      )}
 
       {selectedAgents.length === 0 ? (
         <p>No agents selected.</p>
@@ -101,6 +127,7 @@ const SelectionBucket = ({ selectedAgents, setSelectedAgents }) => {
                 key={agent.id}
                 agent={agent}
                 onRemove={removeAgent}
+                isGovernanceRefused={isGovernanceRefused}
               />
             ))}
           </SortableContext>
