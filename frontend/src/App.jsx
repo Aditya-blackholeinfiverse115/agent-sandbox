@@ -27,9 +27,7 @@ function App() {
   );
 
   // Only ACTIVE agents are visible
-  const visibleAgents = AgentRegistry.filter(
-    (agent) => agent.lifecycle_state === LIFECYCLE_STATES.ACTIVE
-  );
+  const visibleAgents = AgentRegistry;
 
   return (
     <div className="container">

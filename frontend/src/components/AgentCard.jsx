@@ -6,17 +6,31 @@ const AgentCard = ({
   isSelected,
   onToggle,
   isRefused,
-  load,   // ✅ receive number directly
+  load,
 }) => {
-  const isDisabled =
-    agent.lifecycle_state === LIFECYCLE_STATES.SUSPENDED;
+  const lifecycle = agent.lifecycle_state;
+
+  // -----------------------------
+  // Deterministic Lifecycle Rules
+  // -----------------------------
+
+  const isSuspended =
+    lifecycle === LIFECYCLE_STATES.SUSPENDED;
+
+  const isDeprecated =
+    lifecycle === LIFECYCLE_STATES.DEPRECATED;
+
+  const isActive =
+    lifecycle === LIFECYCLE_STATES.ACTIVE;
+
+  // Suspended = visible but not selectable
+  const isDisabled = isSuspended;
 
   const [showWhy, setShowWhy] = useState(false);
 
   const handleClick = () => {
-    if (!isDisabled && !isRefused) {
-      onToggle();
-    }
+    if (isDisabled || isRefused) return;
+    onToggle();
   };
 
   const toggleWhy = (e) => {
@@ -26,14 +40,23 @@ const AgentCard = ({
 
   return (
     <div
-      className={`card 
-        ${isSelected ? "selected" : ""} 
-        ${isDisabled ? "disabled" : ""} 
+      className={`card
+        ${isSelected ? "selected" : ""}
+        ${isDisabled ? "disabled" : ""}
+        ${isDeprecated ? "deprecated" : ""}
         ${isRefused ? "governance-refused" : ""}
       `}
       onClick={handleClick}
     >
-      <h3>{agent.name}</h3>
+      <h3>
+        {agent.name}
+        {isDeprecated && (
+          <span className="badge-warning">
+            ⚠ Deprecated
+          </span>
+        )}
+      </h3>
+
       <p>{agent.description}</p>
 
       <p className="authority">
@@ -42,10 +65,11 @@ const AgentCard = ({
 
       <div className="meta">
         <span
-          className={`lifecycle_state ${agent.lifecycle_state.toLowerCase()}`}
+          className={`lifecycle_state ${lifecycle.toLowerCase()}`}
         >
-          {agent.lifecycle_state}
+          {lifecycle}
         </span>
+
         <span className="load">
           Load: {load ?? 0}%
         </span>
@@ -63,9 +87,9 @@ const AgentCard = ({
         </div>
       )}
 
-      {isDisabled && (
+      {isSuspended && (
         <div className="refusal">
-          ⚠ Agent Suspended
+          ⚠ Agent Suspended — Not Selectable
         </div>
       )}
 

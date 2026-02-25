@@ -1,5 +1,6 @@
 import React from "react";
 import AgentCard from "./AgentCard";
+import { LIFECYCLE_STATES } from "../registry/AgentContract";
 
 const AgentList = ({
   agents,
@@ -9,16 +10,22 @@ const AgentList = ({
   simulateRefusal,
   runtimeLoadById,
 }) => {
-  const toggleAgent = (agentId) => {
+
+  // Deterministic lifecycle enforcement
+  const toggleAgent = (agent) => {
+    const isSuspended =
+      agent.lifecycle_state === LIFECYCLE_STATES.SUSPENDED;
+
     const isRefused =
-      simulateRefusal && agentId === 3;
+      simulateRefusal && agent.id === 3;
 
-    if (isRefused) return;
+    // Suspended agents cannot be selected
+    if (isSuspended || isRefused) return;
 
-    if (selectedAgentIds.includes(agentId)) {
-      deselectAgent(agentId);
+    if (selectedAgentIds.includes(agent.id)) {
+      deselectAgent(agent.id);
     } else {
-      selectAgent(agentId);
+      selectAgent(agent.id);
     }
   };
 
@@ -28,20 +35,28 @@ const AgentList = ({
         const isSelected =
           selectedAgentIds.includes(agent.id);
 
-        // Correct runtime value (number)
         const load =
           runtimeLoadById?.[agent.id] ?? 0;
+
+        const isSuspended =
+          agent.lifecycle_state === LIFECYCLE_STATES.SUSPENDED;
+
+        const isDeprecated =
+          agent.lifecycle_state === LIFECYCLE_STATES.DEPRECATED;
+
+        const isRefused =
+          simulateRefusal && agent.id === 3;
 
         return (
           <AgentCard
             key={agent.id}
             agent={agent}
-            load={load}   // ✅ pass number
+            load={load}
             isSelected={isSelected}
-            onToggle={() => toggleAgent(agent.id)}
-            isRefused={
-              simulateRefusal && agent.id === 3
-            }
+            onToggle={() => toggleAgent(agent)}
+            isSuspended={isSuspended}
+            isDeprecated={isDeprecated}
+            isRefused={isRefused}
           />
         );
       })}
