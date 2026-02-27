@@ -74,8 +74,9 @@ const AgentCard = ({
           {lifecycle}
         </span>
 
-        <span className="load">
-          Load: {load ?? 0}%
+        <span className="load">{agent.load_visibility
+          ? `Load: ${load ?? 0}%`
+          : "Load: Hidden"}
         </span>
       </div>
 
