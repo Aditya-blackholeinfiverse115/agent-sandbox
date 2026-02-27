@@ -60,6 +60,12 @@ h2 {
   color: #9ca3af;
 }
 
+.badge-warning {
+  color: #ff4d4f;
+  font-weight: 600;
+  margin-left: 8px;
+}
+
 /* META */
 .meta {
   display: flex;
