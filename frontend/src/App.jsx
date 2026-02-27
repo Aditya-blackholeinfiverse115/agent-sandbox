@@ -15,15 +15,18 @@ function App() {
     runtimeLoadById = {},
     selectAgent,
     deselectAgent,
+    reorderAgents, // ✅ needed for drag reorder
   } = useSession();
 
-  // 🔥 Governance toggle (UI-level simulation)
-  const [simulateRefusal, setSimulateRefusal] = React.useState(false);
-
-  // Derive selected agents from immutable registry
-  const selectedAgents = AgentRegistry.filter((agent) =>
-    selectedAgentIds.includes(agent.id)
-  );
+  /**
+   * Preserve selection order based on selectedAgentIds
+   * (DO NOT use filter alone — breaks reorder)
+   */
+  const selectedAgents = selectedAgentIds
+    .map((id) =>
+      AgentRegistry.find((agent) => agent.id === id)
+    )
+    .filter(Boolean);
 
   const visibleAgents = AgentRegistry;
 
@@ -32,26 +35,13 @@ function App() {
       <h1>🧠 Deterministic Agent Registry</h1>
 
       <SystemContextBanner
-        simulateRefusal={simulateRefusal}
         registryVersion="v1.0"
-        mutationEnabled={false}
+        mutationEnabled={true}
       />
 
       <div className="system-banner">
-        <strong>Layer-2 Context:</strong> Agents are immutable capability definitions.
-        Selection does not modify registry state.
-      </div>
-
-      {/* Governance Toggle */}
-      <div className="governance-toggle">
-        <label>
-          <input
-            type="checkbox"
-            checked={simulateRefusal}
-            onChange={() => setSimulateRefusal((prev) => !prev)}
-          />
-          Simulate Governance Refusal (UI Only)
-        </label>
+        <strong>System Context:</strong> Agents are immutable capability
+        definitions. Selection does not modify registry state.
       </div>
 
       <h2>Agent Registry</h2>
@@ -60,15 +50,13 @@ function App() {
         selectedAgentIds={selectedAgentIds}
         selectAgent={selectAgent}
         deselectAgent={deselectAgent}
-        simulateRefusal={simulateRefusal}
         runtimeLoadById={runtimeLoadById}
       />
 
-      {/* ✅ FIX: Pass governance state to bucket */}
       <SelectionBucket
         selectedAgents={selectedAgents}
         deselectAgent={deselectAgent}
-        isGovernanceRefused={simulateRefusal}
+        reorderAgents={reorderAgents}
       />
 
       <h2>Chain Visualization</h2>

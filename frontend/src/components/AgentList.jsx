@@ -7,27 +7,29 @@ const AgentList = ({
   selectedAgentIds,
   selectAgent,
   deselectAgent,
-  simulateRefusal,
   runtimeLoadById,
 }) => {
 
-  // Deterministic lifecycle enforcement
+  // Deterministic lifecycle enforcement ONLY
   const toggleAgent = (agent) => {
-  const isSuspended =
-    agent.lifecycle_state === LIFECYCLE_STATES.SUSPENDED;
+    const lifecycle =
+      agent.lifecycle_state || LIFECYCLE_STATES.ACTIVE;
 
-  const isRefused =
-    simulateRefusal && agent.id === 3;
+    const isSuspended =
+      lifecycle === LIFECYCLE_STATES.SUSPENDED;
 
-  // 🔒 ALL interaction enforcement lives here
-  if (isSuspended || isRefused) return;
+    const isGovernanceEligible =
+      agent.governance_eligible;
 
-  if (selectedAgentIds.includes(agent.id)) {
-    deselectAgent(agent.id);
-  } else {
-    selectAgent(agent.id);
-  }
-};
+    // 🔒 Central enforcement rule
+    if (isSuspended || !isGovernanceEligible) return;
+
+    if (selectedAgentIds.includes(agent.id)) {
+      deselectAgent(agent.id);
+    } else {
+      selectAgent(agent.id);
+    }
+  };
 
   return (
     <div className="grid">
@@ -38,15 +40,6 @@ const AgentList = ({
         const load =
           runtimeLoadById?.[agent.id] ?? 0;
 
-        const isSuspended =
-          agent.lifecycle_state === LIFECYCLE_STATES.SUSPENDED;
-
-        const isDeprecated =
-          agent.lifecycle_state === LIFECYCLE_STATES.DEPRECATED;
-
-        const isRefused =
-          simulateRefusal && agent.id === 3;
-
         return (
           <AgentCard
             key={agent.id}
@@ -54,9 +47,6 @@ const AgentList = ({
             load={load}
             isSelected={isSelected}
             onToggle={() => toggleAgent(agent)}
-            isSuspended={isSuspended}
-            isDeprecated={isDeprecated}
-            isRefused={isRefused}
           />
         );
       })}

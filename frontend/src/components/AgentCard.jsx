@@ -5,14 +5,13 @@ const AgentCard = ({
   agent,
   isSelected,
   onToggle,
-  isRefused,
   load,
 }) => {
   const lifecycle =
     agent.lifecycle_state || LIFECYCLE_STATES.ACTIVE;
 
   // --------------------------------
-  // Presentation-Only Lifecycle Flags
+  // Deterministic Contract Enforcement
   // --------------------------------
 
   const isSuspended =
@@ -21,13 +20,17 @@ const AgentCard = ({
   const isDeprecated =
     lifecycle === LIFECYCLE_STATES.DEPRECATED;
 
-  // Visual state only (no enforcement here)
-  const isDisabled = isSuspended;
+  const isGovernanceEligible =
+    agent.governance_eligible;
+
+  // Unified enforcement rule
+  const isDisabled =
+    isSuspended || !isGovernanceEligible;
 
   const [showWhy, setShowWhy] = useState(false);
 
   const handleClick = () => {
-    // Card delegates all control decisions upward
+    if (isDisabled) return;
     onToggle();
   };
 
@@ -43,7 +46,7 @@ const AgentCard = ({
         isSelected && "selected",
         isDisabled && "disabled",
         isDeprecated && "deprecated",
-        isRefused && "governance-refused",
+        !isGovernanceEligible && "governance-refused",
       ]
         .filter(Boolean)
         .join(" ")}
@@ -94,11 +97,11 @@ const AgentCard = ({
         </div>
       )}
 
-      {isRefused && (
+      {!isGovernanceEligible && (
         <div className="governance-refusal">
           🚫 Governance Refused
           <br />
-          Not eligible in current context
+          Not eligible under current contract
         </div>
       )}
     </div>
