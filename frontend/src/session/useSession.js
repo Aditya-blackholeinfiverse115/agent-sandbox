@@ -34,21 +34,6 @@ export function useSession() {
       payload: newOrderedIds,
     });
 
-  const setRuntimeLoad = (id, load) =>
-    dispatch({
-      type: "SET_RUNTIME_LOAD",
-      payload: { id, load },
-    });
-
-  const toggleGovernanceOverride = (id) =>
-    dispatch({
-      type: "TOGGLE_GOVERNANCE_OVERRIDE",
-      payload: id,
-    });
-
-  const clearSession = () =>
-    dispatch({ type: "CLEAR_SESSION" });
-
   /* --------------------------
      Public Session Surface
   -------------------------- */
@@ -67,8 +52,5 @@ export function useSession() {
     selectAgent,
     deselectAgent,
     reorderAgents,
-    setRuntimeLoad,
-    toggleGovernanceOverride,
-    clearSession,
   };
 }

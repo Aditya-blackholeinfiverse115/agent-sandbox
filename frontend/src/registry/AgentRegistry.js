@@ -72,7 +72,7 @@ export const AgentRegistry = Object.freeze([
     description: "Routes tasks between agents.",
     authority_scope: "Routing only. No content processing.",
     capability_type: "Orchestration",
-    lifecycle_state: LIFECYCLE_STATES.ACTIVE,
+    lifecycle_state: LIFECYCLE_STATES.susp,
     load_visibility: false,
     governance_eligible: true,
     why_exists:
