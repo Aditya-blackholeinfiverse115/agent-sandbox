@@ -13,7 +13,8 @@ export const contractVersion = "1.0.0";
  * Global mutation policy for registry surface.
  * Layer-2 must remain immutable by default.
 */
-export const mutationEnabled = false;
+export const mutationEnabled = 
+  "Disabled (Contract Locked)";
 
 /*
  * Governance model declaration.

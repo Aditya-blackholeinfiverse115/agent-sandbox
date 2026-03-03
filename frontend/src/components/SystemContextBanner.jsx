@@ -19,8 +19,7 @@ const SystemContextBanner = ({
         </div>
 
         <div className="banner-item">
-          <strong>Mutation Mode:</strong>{" "}
-          {mutationEnabled ? "Enabled" : "Disabled"}
+          <strong>Mutation Mode:</strong>{mutationEnabled}
         </div>
 
         <div className="banner-item">
