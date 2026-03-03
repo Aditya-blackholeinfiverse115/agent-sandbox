@@ -3,6 +3,10 @@ import {
   getAllAgents,
   getAgentById,
   getRegistryVersion,
+  getContractVersion,
+  isMutationEnabled,
+  getGovernanceModel,
+  getSystemContextDescription,
 } from "./registry/RegistryInterface";
 import AgentList from "./components/AgentList";
 import ChainVisualizer from "./components/ChainVisualizer";
@@ -22,12 +26,12 @@ function App() {
     reorderAgents,
   } = useSession();
 
-  // Controlled registry access
+  // Controlled registry access (Layer-2 surface)
   const visibleAgents = getAllAgents();
 
   /**
    * Preserve selection order based on selectedAgentIds
-   * (DO NOT use filter alone — breaks reorder)
+   * (DO NOT use filter alone — breaks reorder determinism)
    */
   const selectedAgents = selectedAgentIds
     .map((id) => getAgentById(id))
@@ -38,13 +42,14 @@ function App() {
       <h1>🧠 Deterministic Agent Registry</h1>
 
       <SystemContextBanner
-        registryVersion={`v${getRegistryVersion()}`}
-        mutationEnabled={false}
+        registryVersion={getRegistryVersion()}
+        contractVersion={getContractVersion()}
+        mutationEnabled={isMutationEnabled()}
+        governanceModel={getGovernanceModel()}
       />
 
       <div className="system-banner">
-        <strong>System Context:</strong> Agents are immutable capability
-        definitions. Selection does not modify registry state.
+        <strong>System Context:</strong> {getSystemContextDescription()}
       </div>
 
       <h2>Agent Registry</h2>
