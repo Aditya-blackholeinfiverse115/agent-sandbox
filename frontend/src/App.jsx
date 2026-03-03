@@ -71,6 +71,7 @@ function App() {
       <h2>Chain Preview</h2>
       <ChainPreview selectedAgents={selectedAgents} />
 
+      <h2>Mutation Attempt Simulator</h2>
       <MutationSimulator />
     </div>
   );
