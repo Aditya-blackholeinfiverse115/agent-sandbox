@@ -46,11 +46,8 @@ function App() {
         contractVersion={getContractVersion()}
         mutationEnabled={isMutationEnabled()}
         governanceModel={getGovernanceModel()}
+        systemContextDescription={getSystemContextDescription()}
       />
-
-      <div className="system-banner">
-        <strong>System Context:</strong> {getSystemContextDescription()}
-      </div>
 
       <h2>Agent Registry</h2>
       <AgentList
