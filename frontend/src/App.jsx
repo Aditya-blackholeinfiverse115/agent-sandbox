@@ -1,5 +1,9 @@
 import React from "react";
-import { AgentRegistry } from "./registry/AgentRegistry";
+import {
+  getAllAgents,
+  getAgentById,
+  getRegistryVersion,
+} from "./registry/RegistryInterface";
 import AgentList from "./components/AgentList";
 import ChainVisualizer from "./components/ChainVisualizer";
 import SelectionBucket from "./components/SelectionBucket";
@@ -15,28 +19,27 @@ function App() {
     runtimeLoadById = {},
     selectAgent,
     deselectAgent,
-    reorderAgents, // ✅ needed for drag reorder
+    reorderAgents,
   } = useSession();
+
+  // Controlled registry access
+  const visibleAgents = getAllAgents();
 
   /**
    * Preserve selection order based on selectedAgentIds
    * (DO NOT use filter alone — breaks reorder)
    */
   const selectedAgents = selectedAgentIds
-    .map((id) =>
-      AgentRegistry.find((agent) => agent.id === id)
-    )
+    .map((id) => getAgentById(id))
     .filter(Boolean);
-
-  const visibleAgents = AgentRegistry;
 
   return (
     <div className="container">
       <h1>🧠 Deterministic Agent Registry</h1>
 
       <SystemContextBanner
-        registryVersion="v1.0"
-        mutationEnabled={true}
+        registryVersion={`v${getRegistryVersion()}`}
+        mutationEnabled={false}
       />
 
       <div className="system-banner">
