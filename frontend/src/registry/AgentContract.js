@@ -2,21 +2,40 @@
  * AgentContract.js
  *
  * Defines the formal Layer-2 Agent Definition Contract.
- * This enforces structural integrity and immutability
+ * This enforces structural integrity and deep immutability
  * for all registered agents.
  *
  * Layer-2 defines capability — not runtime behavior.
  */
 
-export const LIFECYCLE_STATES = Object.freeze({
+/**
+ * Deep freeze utility.
+ * Recursively freezes all nested objects to prevent mutation.
+ */
+function deepFreeze(obj) {
+  if (obj && typeof obj === "object" && !Object.isFrozen(obj)) {
+    Object.freeze(obj);
+
+    Object.getOwnPropertyNames(obj).forEach((prop) => {
+      const value = obj[prop];
+      if (value && typeof value === "object") {
+        deepFreeze(value);
+      }
+    });
+  }
+
+  return obj;
+}
+
+export const LIFECYCLE_STATES = deepFreeze({
   ACTIVE: "Active",
   DEPRECATED: "Deprecated",
   SUSPENDED: "Suspended",
 });
 
 /**
- * Factory to create a deterministic, immutable Agent definition.
- * Authority fields are frozen to prevent runtime mutation.
+ * Factory to create a deterministic, deeply immutable Agent definition.
+ * All fields are recursively frozen to prevent runtime mutation.
  */
 export function createAgentContract({
   id,
@@ -59,5 +78,6 @@ export function createAgentContract({
     why_exists,
   };
 
-  return Object.freeze(agent);
+  // Deep immutability enforcement
+  return deepFreeze(agent);
 }

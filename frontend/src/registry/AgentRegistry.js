@@ -79,3 +79,24 @@ export const AgentRegistry = Object.freeze([
       "Coordinates task flow between agents without processing content.",
   }),
 ]);
+
+
+/* -----------------------------------------------------
+   DEV-ONLY IMMUTABILITY ENFORCEMENT TEST
+----------------------------------------------------- */
+/*
+if (import.meta.env.DEV !== "production") {
+  try {
+    AgentRegistry[0].authority_scope = "HACKED";
+    console.error("❌ Mutation succeeded — deep freeze failed.");
+  } catch {
+    console.log("✅ authority_scope mutation blocked.");
+  }
+
+  try {
+    AgentRegistry.push({ id: 999 });
+    console.error("❌ Registry array mutation succeeded.");
+  } catch {
+    console.log("✅ Registry array mutation blocked.");
+  }
+}*/
