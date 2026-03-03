@@ -14,6 +14,7 @@ import SelectionBucket from "./components/SelectionBucket";
 import ChainPreview from "./components/ChainPreview";
 import { useSession } from "./session/useSession";
 import SystemContextBanner from "./components/SystemContextBanner";
+import MutationSimulator from "./components/MutationSimulator";
 import "./App.css";
 
 function App() {
@@ -69,6 +70,8 @@ function App() {
 
       <h2>Chain Preview</h2>
       <ChainPreview selectedAgents={selectedAgents} />
+
+      <MutationSimulator />
     </div>
   );
 }
