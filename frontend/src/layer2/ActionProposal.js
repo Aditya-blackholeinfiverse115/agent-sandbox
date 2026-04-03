@@ -1,4 +1,4 @@
-// src/layer2/ActionProposal.js
+import { validateStructure } from "./StructuralValidator";
 
 /**
  * Deterministic Layer-2 ActionProposal Builder
@@ -11,12 +11,41 @@ export function buildActionProposal({
   agents,
   context = {}
 }) {
+
+  // Step 1 — Structural validation
+  const validation = validateStructure(agents);
+
+  // Step 2 — If invalid → reject immediately
+  if (!validation.valid) {
+    return {
+      approved: false,
+
+      actor,
+
+      action,
+
+      agents,
+
+      sequence: [...agents],
+
+      constraints: {
+        lifecycle_valid: false,
+        governance_status: "deny"
+      },
+
+      context: {},
+
+      reason: validation.errors.join(", ")
+    };
+  }
+
+  // Step 3 — Valid → allow execution
   return {
     approved: true,
 
-    actor: actor,
+    actor,
 
-    action: action,
+    action,
 
     agents: [...agents],
 
@@ -27,7 +56,7 @@ export function buildActionProposal({
       governance_status: "allow"
     },
 
-    context: context,
+    context,
 
     reason:
       "Deterministic Layer-2 approval: lifecycle valid and governance allow"
