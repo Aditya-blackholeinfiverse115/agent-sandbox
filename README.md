@@ -1,195 +1,135 @@
-﻿# Agent Sandbox
+# Requirement 2 – Deep Immutability Enforcement
 
-A frontend-only sandbox prototype that visualizes what a governed “Agent Bucket” system could look like.
+## Objective
 
-This project focuses on clarity, visibility, and explicit capability modeling — not intelligence or backend orchestration.
+Upgrade the registry contract from shallow immutability (`Object.freeze`) to **recursive structural immutability**, ensuring:
 
----
+* Nested fields cannot mutate
+* Contract definitions are permanently sealed
+* The registry surface cannot expand or shrink at runtime
+* Enforcement is demonstrably verified
 
-# What This Simulates
-
-This application simulates the **visual and mental model** of a governed multi-agent system.
-
-Specifically, it simulates:
-
-### 1️⃣ Agent Registry
-
-* A list of mock agents (hardcoded JSON)
-* Clear capability descriptions
-* Declared authority scope
-* Status indicators (Available / Busy / Disabled)
-* Load indicators
-* UI-based status constraints
+This establishes Layer-2 as a formally isolated capability surface.
 
 ---
 
-### 2️⃣ Agent Selection Bucket
+## 1. Recursive `deepFreeze` Utility
 
-* Adding agents to a visual bucket
-* Removing agents
-* Reordering agents
+A custom `deepFreeze` utility was implemented to enforce immutability across nested structures.
 
-This represents sequencing intent — not execution.
+```javascript
+function deepFreeze(obj) {
+  if (obj && typeof obj === "object" && !Object.isFrozen(obj)) {
+    Object.freeze(obj);
 
----
+    Object.getOwnPropertyNames(obj).forEach((prop) => {
+      const value = obj[prop];
+      if (value && typeof value === "object") {
+        deepFreeze(value);
+      }
+    });
+  }
 
-### 3️⃣ Chain Preview
-
-A simple UI representation of agent order:
-
-```
-Text Summarizer → Risk Evaluator → Workflow Router
+  return obj;
+}
 ```
 
-This is sequencing visualization only.
+### Why This Matters
+
+`Object.freeze()` alone protects only the top level.
+
+`deepFreeze()` ensures:
+
+* Nested objects
+* Future structured fields
+* Extended capability metadata
+
+are also protected against runtime mutation.
+
+This future-proofs the contract surface.
 
 ---
 
-### 4️⃣ Governance Refusal Simulation
+## 2. Immutable Agent Contract Enforcement
 
-A toggle that simulates:
+The contract factory now returns a recursively frozen object:
 
-> “Governance Refused This Agent”
+```javascript
+return deepFreeze(agent);
+```
 
-When activated:
+This guarantees:
 
-* The agent card visibly shows refusal state
-* Displays:
-  `Not eligible in current context`
-* Blocks selection
+* `authority_scope` cannot be reassigned
+* `capability_type` cannot mutate
+* Governance flags cannot change
+* Lifecycle state cannot be altered at runtime
 
-This models how governance might appear to a user — without implementing governance logic.
-
----
-
-### 5️⃣ Transparency Layer
-
-Each agent contains a collapsible:
-
-> “Why this agent exists” section
-
-This makes:
-
-* Capability explicit
-* Authority understandable
-* Boundaries visible
-* System behavior less “magical”
+Layer-2 defines capability — not behavior.
 
 ---
 
-# What This Does NOT Simulate
+## 3. Registry Surface Freeze
 
-This project does **not** simulate:
+The registry container itself is frozen:
 
-* AI reasoning
-* Model execution
-* Real orchestration
-* Backend systems
-* Policy engines
-* Governance enforcement
-* Authentication
-* API communication
-* Context evaluation
-* Sarathi logic
+```javascript
+export const AgentRegistry = Object.freeze([
+  createAgentContract({...}),
+  createAgentContract({...}),
+]);
+```
 
-There is:
+This prevents:
 
-* No execution engine
-* No decision-making engine
-* No workflow runtime
-* No real chaining
+* Adding agents at runtime
+* Removing agents dynamically
+* Reordering the registry source
+* Structural mutation of the Layer-2 boundary
 
-All behavior is UI state simulation only.
-
-If the system appears intelligent, it is only structured UI logic.
+Layer-2 is a static definition surface.
 
 ---
 
-# What Layer-2 Actually Is
+## 4. Dev-Mode Mutation Proof
 
-In this context, **Layer-2 is not AI.**
+A development-only internal mutation test was implemented:
 
-Layer-2 represents:
+```javascript
+if (import.meta.env.DEV !== "production") {
+  try {
+    AgentRegistry[0].authority_scope = "HACKED";
+    console.error("❌ Mutation succeeded — deep freeze failed.");
+  } catch {
+    console.log("✅ authority_scope mutation blocked.");
+  }
 
-> The governance + visibility layer that sits between capability and execution.
+  try {
+    AgentRegistry.push({ id: 999 });
+    console.error("❌ Registry array mutation succeeded.");
+  } catch {
+    console.log("✅ Registry array mutation blocked.");
+  }
+}
+```
 
-It is the layer that:
+### Observed Result
 
-* Declares what an agent is allowed to do
-* Exposes authority scope
-* Surfaces status constraints
-* Communicates refusal clearly
-* Makes sequencing visible
-* Prevents invisible orchestration
+Console output confirms:
 
-Layer-2 is about:
+```
+✅ authority_scope mutation blocked.
+✅ Registry array mutation blocked.
+```
 
-* Interface clarity
-* System transparency
-* User trust
-* Explicit boundaries
+This demonstrates:
 
-It is not:
+* Nested mutation fails
+* Container mutation fails
+* Enforcement is runtime-verified
 
-* Model intelligence
-* Backend infrastructure
-* Distributed execution
-* Policy computation
-
-It is the **interpretability and governance experience layer**.
-
----
-
-# Lessons Learned
-
-### 1️⃣ Visibility Reduces Magic
-
-When capability is declared explicitly (authority, purpose and explanation) the system feels controlled rather than mysterious.
-
----
-
-### 2️⃣ Refusal Must Be Designed
-
-A refusal state is not an error.
-It is a governance expression.
-Clear refusal messaging builds trust.
-
----
-
-### 3️⃣ Status Is Behavioral UX
-
-Even without backend logic, UI states (Available / Busy / Disabled) meaningfully shape user interaction.
-
----
-
-
-### 4️⃣ Transparency Is a Design Choice
-
-Adding “Why this agent exists” changes how users perceive the system.
-It shifts from:
-
-> “The AI decided”
-
-to
-
-> “This component exists for this declared purpose”
-
----
-
-### 5️⃣ Governance Is an Experience Layer
-
-Even when simulated, governance alters behavior, expectation, and trust.
-That experience can be prototyped without building infrastructure.
-
----
-
-# Final Thought
-
-This project demonstrates how to:
-
-* Make invisible capability visible
-* Represent governance without implementing it
-* Model sequencing without execution
-* Create clarity without backend complexity
-
-It is a sandbox for understanding how governed agent systems might feel — not how they function internally.
+## Note 
+* The Agent Contract uses recursive deepFreeze to enforce structural immutability 
+* Nested properties (e.g., authority_scope) cannot be modified at runtime
+* The registry array itself is frozen to prevent agent insertion/removal post initialization
+* Dev-mode mutation attempts confirm enforcement

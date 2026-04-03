@@ -60,29 +60,17 @@ h2 {
   color: #9ca3af;
 }
 
+.badge-warning {
+  color: #ff4d4f;
+  font-weight: 600;
+  margin-left: 8px;
+}
+
 /* META */
 .meta {
   display: flex;
   justify-content: space-between;
   margin-top: 12px;
-}
-
-/* STATUS BADGES */
-.status {
-  padding: 4px 10px;
-  border-radius: 20px;
-  font-size: 12px;
-  font-weight: 500;
-}
-
-.available {
-  background: #065f46;
-  color: #10b981;
-}
-
-.busy {
-  background: #78350f;
-  color: #f59e0b;
 }
 
 .disabled {
@@ -140,24 +128,6 @@ h2 {
   color: #9ca3af;
 }
 
-.bucket-actions button {
-  margin-left: 8px;
-  padding: 4px 8px;
-  border: none;
-  border-radius: 6px;
-  cursor: pointer;
-  background: #374151;
-  color: white;
-}
-
-.bucket-actions button:hover {
-  background: #4b5563;
-}
-
-.empty {
-  color: #6b7280;
-  font-size: 14px;
-}
 .chain-preview {
   margin-top: 30px;
   padding: 18px;
@@ -239,4 +209,56 @@ h2 {
   font-size: 13px;
   color: #d1d5db;
   line-height: 1.4;
+}
+
+/* ===========================
+   SYSTEM CONTEXT BANNER (Top)
+=========================== */
+
+.system-context-banner {
+  background: #0e1117;
+  border: 1px solid #1f2937;
+  border-radius: 10px;
+  padding: 14px 20px;
+  margin-bottom: 16px;
+
+  display: flex;
+  align-items: center;
+  gap: 25px;
+  flex-wrap: wrap;
+}
+
+.banner-item {
+  font-size: 14px;
+  color: #e5e7eb;
+  white-space: nowrap;
+}
+
+.banner-item strong {
+  font-size: 12px;
+  color: #9ca3af;
+  text-transform: uppercase;
+  margin-right: 6px;
+  letter-spacing: 0.5px;
+}
+
+
+/* ===========================
+   SECONDARY SYSTEM BANNER
+=========================== */
+
+.system-banner {
+  background: rgba(59, 130, 246, 0.08);
+  border: 1px solid rgba(59, 130, 246, 0.25);
+  border-radius: 8px;
+  padding: 12px 16px;
+  margin-bottom: 24px;
+
+  font-size: 14px;
+  color: #cbd5e1;
+}
+
+.system-banner strong {
+  color: #60a5fa;
+  margin-right: 6px;
 }

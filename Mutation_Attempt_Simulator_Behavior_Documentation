@@ -1,0 +1,89 @@
+# Mutation Attempt Simulator — Behavior Documentation
+
+## Build Debug Panel
+
+A temporary debug panel titled:
+
+**“Mutation Attempt Simulator”**
+
+was introduced to validate structural immutability at runtime.
+
+This panel is clearly marked:
+
+> **Debug Mode – Not Production Surface**
+
+The panel is intentionally isolated from production UI logic and exists only to validate enforcement guarantees.
+
+It is not part of the integration surface.
+
+---
+
+## Attempt Controlled Mutation
+
+The debug panel provides three explicit mutation attempts:
+
+- Attempt to mutate `authority_scope`
+- Attempt to mutate `lifecycle_state`
+- Attempt to mutate `governance_eligible`
+
+Each action:
+
+1. Retrieves an agent through `RegistryInterface`
+2. Attempts direct property reassignment
+3. Wraps the mutation in a controlled `try/catch` block
+4. Logs the result to console and UI log panel
+
+No registry object is accessed directly.
+No registry write operation exists.
+
+---
+
+## Documented Behavior
+
+When mutation is attempted:
+
+- The operation fails due to deep immutability enforcement.
+- Either a controlled error is thrown or the mutation silently fails (depending on strict mode behavior).
+- No agent data is altered.
+- No UI state is corrupted.
+- No registry state is modified.
+
+The log displays confirmation such as:
+
+- “✅ Authority mutation blocked (immutable).”
+- “✅ Lifecycle mutation blocked (immutable).”
+- “✅ Governance mutation blocked (immutable).”
+
+After repeated attempts:
+
+- Agent contracts remain unchanged.
+- Registry structure remains deterministic.
+- System integrity is preserved.
+
+---
+
+## Architectural Significance
+
+The Mutation Attempt Simulator provides runtime proof of:
+
+- Deep immutability enforcement
+- Registry isolation
+- Zero-mutation guarantee
+- Closed control plane integrity
+
+This validates that structural capability definitions cannot be altered during execution.
+
+The system does not rely on convention.
+It relies on enforced immutability.
+
+---
+
+## Conclusion
+
+The Mutation Attempt Simulator demonstrates that:
+
+- Mutation is structurally impossible.
+- Registry contracts are locked.
+- Runtime cannot contaminate capability definitions.
+
+This confirms compliance with the Zero-Mutation Guarantee requirement.

@@ -1,44 +1,55 @@
 import React from "react";
 import AgentCard from "./AgentCard";
+import { LIFECYCLE_STATES } from "../registry/AgentContract";
 
 const AgentList = ({
   agents,
-  selectedAgents,
-  setSelectedAgents,
-  simulateRefusal,
+  selectedAgentIds,
+  selectAgent,
+  deselectAgent,
+  runtimeLoadById,
 }) => {
 
+  // Deterministic lifecycle enforcement ONLY
   const toggleAgent = (agent) => {
+    const lifecycle =
+      agent.lifecycle_state || LIFECYCLE_STATES.ACTIVE;
 
-    const isRefused =
-      simulateRefusal && agent.id === 3;
+    const isSuspended =
+      lifecycle === LIFECYCLE_STATES.SUSPENDED;
 
-    if (isRefused) return;
+    const isGovernanceEligible =
+      agent.governance_eligible;
 
-    const exists = selectedAgents.find((a) => a.id === agent.id);
+    // 🔒 Central enforcement rule
+    if (isSuspended || !isGovernanceEligible) return;
 
-    if (exists) {
-      setSelectedAgents(
-        selectedAgents.filter((a) => a.id !== agent.id)
-      );
+    if (selectedAgentIds.includes(agent.id)) {
+      deselectAgent(agent.id);
     } else {
-      setSelectedAgents([...selectedAgents, agent]);
+      selectAgent(agent.id);
     }
   };
 
   return (
     <div className="grid">
-      {agents.map((agent) => (
-        <AgentCard
-          key={agent.id}
-          agent={agent}
-          isSelected={selectedAgents.some((a) => a.id === agent.id)}
-          onToggle={toggleAgent}
-          isRefused={
-            simulateRefusal && agent.id === 3
-          }
-        />
-      ))}
+      {agents.map((agent) => {
+        const isSelected =
+          selectedAgentIds.includes(agent.id);
+
+        const load =
+          runtimeLoadById?.[agent.id] ?? 0;
+
+        return (
+          <AgentCard
+            key={agent.id}
+            agent={agent}
+            load={load}
+            isSelected={isSelected}
+            onToggle={() => toggleAgent(agent)}
+          />
+        );
+      })}
     </div>
   );
 };

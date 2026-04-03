@@ -11,7 +11,12 @@ import {
 } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
 
-const SortableItem = ({ agent, onRemove, isGovernanceRefused }) => {
+/* =========================
+   Sortable Item
+========================= */
+const SortableItem = ({ agent, onRemove }) => {
+  const isLocked = !agent.governance_eligible;
+
   const {
     attributes,
     listeners,
@@ -20,7 +25,7 @@ const SortableItem = ({ agent, onRemove, isGovernanceRefused }) => {
     transition,
   } = useSortable({
     id: agent.id,
-    disabled: isGovernanceRefused, // 🔒 Disable drag when refused
+    disabled: isLocked,
   });
 
   const style = {
@@ -32,17 +37,16 @@ const SortableItem = ({ agent, onRemove, isGovernanceRefused }) => {
     <div
       ref={setNodeRef}
       style={style}
-      className={`bucket-item ${isGovernanceRefused ? "locked" : ""}`}
+      className={`bucket-item ${isLocked ? "locked" : ""}`}
       {...attributes}
     >
-      {/* Drag Handle */}
       <div
-        {...(!isGovernanceRefused ? listeners : {})}
+        {...(!isLocked ? listeners : {})}
         className="drag-handle"
         style={{
-          cursor: isGovernanceRefused ? "not-allowed" : "grab",
+          cursor: isLocked ? "not-allowed" : "grab",
           marginRight: "10px",
-          opacity: isGovernanceRefused ? 0.4 : 1,
+          opacity: isLocked ? 0.4 : 1,
         }}
       >
         ☰
@@ -51,15 +55,21 @@ const SortableItem = ({ agent, onRemove, isGovernanceRefused }) => {
       <div style={{ flex: 1 }}>
         <strong>{agent.name}</strong>
         <p className="bucket-desc">{agent.description}</p>
+
+        {isLocked && (
+          <div className="governance-refusal">
+            🚫 Contract Ineligible
+          </div>
+        )}
       </div>
 
       <button
-        onClick={() => !isGovernanceRefused && onRemove(agent.id)}
         type="button"
-        disabled={isGovernanceRefused}
+        disabled={isLocked}
+        onClick={() => !isLocked && onRemove(agent.id)}
         style={{
-          opacity: isGovernanceRefused ? 0.5 : 1,
-          cursor: isGovernanceRefused ? "not-allowed" : "pointer",
+          opacity: isLocked ? 0.5 : 1,
+          cursor: isLocked ? "not-allowed" : "pointer",
         }}
       >
         ✕
@@ -68,48 +78,38 @@ const SortableItem = ({ agent, onRemove, isGovernanceRefused }) => {
   );
 };
 
+/* =========================
+   Selection Bucket
+========================= */
 const SelectionBucket = ({
   selectedAgents,
-  setSelectedAgents,
-  isGovernanceRefused, // 🔥 New prop
+  deselectAgent,
+  reorderAgents,
 }) => {
 
   const handleDragEnd = (event) => {
-    if (isGovernanceRefused) return; // 🔒 Block reorder
-
     const { active, over } = event;
-
     if (!over || active.id === over.id) return;
 
     const oldIndex = selectedAgents.findIndex(
-      (item) => item.id === active.id
+      (a) => a.id === active.id
     );
     const newIndex = selectedAgents.findIndex(
-      (item) => item.id === over.id
+      (a) => a.id === over.id
     );
 
-    setSelectedAgents((items) =>
-      arrayMove(items, oldIndex, newIndex)
-    );
-  };
+    const reordered = arrayMove(
+      selectedAgents,
+      oldIndex,
+      newIndex
+    ).map((a) => a.id);
 
-  const removeAgent = (id) => {
-    if (isGovernanceRefused) return; // 🔒 Block removal
-
-    setSelectedAgents((items) =>
-      items.filter((a) => a.id !== id)
-    );
+    reorderAgents(reordered);
   };
 
   return (
-    <div className={`bucket ${isGovernanceRefused ? "bucket-locked" : ""}`}>
+    <div className="bucket">
       <h2>🪣 Agent Selection Bucket</h2>
-
-      {isGovernanceRefused && (
-        <div className="bucket-warning">
-          🚫 Governance active — bucket interaction locked
-        </div>
-      )}
 
       {selectedAgents.length === 0 ? (
         <p>No agents selected.</p>
@@ -126,8 +126,7 @@ const SelectionBucket = ({
               <SortableItem
                 key={agent.id}
                 agent={agent}
-                onRemove={removeAgent}
-                isGovernanceRefused={isGovernanceRefused}
+                onRemove={deselectAgent}
               />
             ))}
           </SortableContext>
