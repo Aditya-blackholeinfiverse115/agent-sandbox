@@ -1,4 +1,5 @@
 import { validateStructure } from "./StructuralValidator";
+import { simulateGovernance } from "./GovernanceHandshake";
 
 /**
  * Deterministic Layer-2 ActionProposal Builder
@@ -15,33 +16,40 @@ export function buildActionProposal({
   // Step 1 — Structural validation
   const validation = validateStructure(agents);
 
-  // Step 2 — If invalid → reject immediately
   if (!validation.valid) {
     return {
       approved: false,
-
       actor,
-
       action,
-
       agents,
-
       sequence: [...agents],
-
       constraints: {
         lifecycle_valid: false,
         governance_status: "deny"
       },
-
       context: {},
-
       reason: validation.errors.join(", ")
     };
   }
 
-  // Step 3 — Valid → allow execution
+  // Step 2 — Governance handshake (Sarathi simulation)
+  const governance = simulateGovernance({
+    actor,
+    action,
+    resource: agents,
+    context
+  });
+
+  // display required logs
+  console.log("Governance Request:", governance.request);
+  console.log("Governance Response:", governance.response);
+
+  // decision impact
+  const approved = governance.response === "allow";
+
+  // Step 3 — Final deterministic output
   return {
-    approved: true,
+    approved,
 
     actor,
 
@@ -53,12 +61,11 @@ export function buildActionProposal({
 
     constraints: {
       lifecycle_valid: true,
-      governance_status: "allow"
+      governance_status: governance.response
     },
 
     context,
 
-    reason:
-      "Deterministic Layer-2 approval: lifecycle valid and governance allow"
+    reason: `Governance decision: ${governance.response}`
   };
 }
