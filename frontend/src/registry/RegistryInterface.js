@@ -65,3 +65,14 @@ export function getGovernanceModel() {
 export function getSystemContextDescription() {
   return systemContextDescription;
 }
+
+
+export const RegistryInterface = {
+  getAllAgents,
+  getAgentById,
+  getRegistryVersion,
+  getContractVersion,
+  isMutationEnabled,
+  getGovernanceModel,
+  getSystemContextDescription
+};

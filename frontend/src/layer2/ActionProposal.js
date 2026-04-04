@@ -1,5 +1,6 @@
 import { validateStructure } from "./StructuralValidator";
 import { simulateGovernance } from "./GovernanceHandshake";
+import { RegistryInterface } from "../registry/RegistryInterface.js";
 
 export function buildActionProposal({
   actor,
@@ -8,10 +9,37 @@ export function buildActionProposal({
   context = {}
 }) {
 
-  // 1. Structural validation
+  // registry interface usage
+  const resolved = agents.map((id) => {
+    const agent = RegistryInterface.getAgentById(id);
+
+    return agent || {
+      id,
+      status: "missing"
+    };
+  });
+
+  // fail closed
+  if (resolved.includes(undefined)) {
+    return {
+      approved: false,
+      actor,
+      action,
+      agents,
+      sequence: [...agents],
+      constraints: {
+        lifecycle_valid: false,
+        governance_status: "deny"
+      },
+      context,
+      reason: "Agent not found in registry"
+    };
+  }
+
+  // structural validation
   const validation = validateStructure(agents);
 
-  // 2. Governance handshake
+  // governance handshake
   const governance = simulateGovernance({
     actor,
     action,
@@ -19,46 +47,23 @@ export function buildActionProposal({
     context
   });
 
-  // show required logs
-  console.log("Governance Request:", governance.request);
-  console.log("Governance Response:", governance.response);
-
-  // 3. Decision engine
   const approved =
     validation.valid &&
     governance.response === "allow";
 
-  // 4. Explicit reason generation
-  let reason = "";
-
-  if (!validation.valid) {
-    reason = validation.errors.join(", ");
-  } else if (governance.response === "deny") {
-    reason = "Governance denied access";
-  } else if (governance.response === "escalate") {
-    reason = "Governance escalation required";
-  } else {
-    reason = "Validation passed and governance allowed";
-  }
-
   return {
     approved,
-
     actor,
-
     action,
-
-    agents: [...agents],
-
+    agents,
     sequence: [...agents],
-
     constraints: {
       lifecycle_valid: validation.valid,
       governance_status: governance.response
     },
-
     context,
-
-    reason
+    reason: approved
+      ? "Validation passed and governance allowed"
+      : "Rejected by Layer-2 decision engine"
   };
 }
