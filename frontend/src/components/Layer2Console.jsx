@@ -64,7 +64,7 @@ export default function Layer2Console() {
           font-size: 12px;
           font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
           color: #e2e8f0;
-          background: #010409;
+          background: #070c14;
           overflow-x: auto;
         }
 
@@ -73,7 +73,7 @@ export default function Layer2Console() {
           font-size: 12px;
           font-family: monospace;
           color: #38bdf8;
-          background: #010409;
+          background: #070c14;
         }
       `}</style>
 
