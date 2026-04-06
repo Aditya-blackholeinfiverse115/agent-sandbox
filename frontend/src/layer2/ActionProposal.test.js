@@ -97,57 +97,65 @@ describe("TC-04 — invalid structure: suspended agent", () => {
 // ─── TC-05  Invalid structure — suspended agent (validateStructure direct) ───
 
 describe("TC-05 — validateStructure: suspended agent", () => {
-  it("returns valid=false with suspended error", () => {
+  it("returns valid=false with AGENT_SUSPENDED error code", () => {
     const result = validateStructure([
       { id: 4, name: "Document Classifier", lifecycle_state: "Suspended" }
     ]);
 
     expect(result.valid).toBe(false);
-    expect(result.errors).toContain("Suspended agent detected: 4");
+    expect(result.errors[0]).toEqual({
+      code: "AGENT_SUSPENDED",
+      message: "Suspended agent detected: 4",
+    });
   });
 });
 
 // ─── TC-06  Invalid structure — duplicate agents ─────────────────────────────
 
 describe("TC-06 — invalid structure: duplicate agents", () => {
-  it("returns lifecycle_valid=false with duplicate error", () => {
+  it("returns valid=false with DUPLICATE_AGENTS error code", () => {
     const agent = { id: 1, name: "Text Summarizer", lifecycle_state: "Active" };
     const result = validateStructure([agent, agent]);
 
     expect(result.valid).toBe(false);
-    expect(result.errors).toContain("Duplicate agents detected");
+    expect(result.errors[0]).toEqual({
+      code: "DUPLICATE_AGENTS",
+      message: "Duplicate agents detected",
+    });
   });
 });
 
 // ─── TC-07  Invalid structure — Risk Evaluator → Text Summarizer ─────────────
 
 describe("TC-07 — invalid structure: Risk Evaluator → Text Summarizer", () => {
-  it("returns lifecycle_valid=false with chaining error", () => {
+  it("returns valid=false with INVALID_CHAIN error code", () => {
     const result = validateStructure([
       { id: 3, name: "Risk Evaluator",  lifecycle_state: "Active" },
       { id: 1, name: "Text Summarizer", lifecycle_state: "Active" },
     ]);
 
     expect(result.valid).toBe(false);
-    expect(result.errors).toContain(
-      "Invalid chaining: Risk Evaluator cannot precede Text Summarizer"
-    );
+    expect(result.errors[0]).toEqual({
+      code: "INVALID_CHAIN",
+      message: "Invalid chaining: Risk Evaluator cannot precede Text Summarizer",
+    });
   });
 });
 
 // ─── TC-08  Invalid structure — Workflow Router → Data Formatter ─────────────
 
 describe("TC-08 — invalid structure: Workflow Router → Data Formatter", () => {
-  it("returns lifecycle_valid=false with chaining error", () => {
+  it("returns valid=false with INVALID_CHAIN error code", () => {
     const result = validateStructure([
       { id: 6, name: "Workflow Router", lifecycle_state: "Active" },
       { id: 2, name: "Data Formatter",  lifecycle_state: "Active" },
     ]);
 
     expect(result.valid).toBe(false);
-    expect(result.errors).toContain(
-      "Invalid chaining: Workflow Router cannot precede Data Formatter"
-    );
+    expect(result.errors[0]).toEqual({
+      code: "INVALID_CHAIN",
+      message: "Invalid chaining: Workflow Router cannot precede Data Formatter",
+    });
   });
 });
 
