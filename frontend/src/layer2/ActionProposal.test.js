@@ -1,10 +1,9 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { buildActionProposal } from "./ActionProposal.js";
 import { validateStructure } from "./StructuralValidator.js";
-import { simulateGovernance } from "./GovernanceHandshake.js";
+import { buildGovernanceRequest } from "./GovernanceHandshake.js";
 import { validateActionProposal } from "./validateActionProposal.js";
 
-// Mock registry so tests are self-contained
 vi.mock("../registry/RegistryInterface.js", () => ({
   RegistryInterface: {
     getAgentById: (id) => {
@@ -24,8 +23,6 @@ vi.mock("../registry/RegistryInterface.js", () => ({
 
 beforeEach(() => vi.clearAllMocks());
 
-// ─── helpers ────────────────────────────────────────────────────────────────
-
 function base(overrides = {}) {
   return {
     actor: "intent-router",
@@ -38,61 +35,61 @@ function base(overrides = {}) {
 
 // ─── TC-01  Valid case ───────────────────────────────────────────────────────
 
-describe("TC-01 — valid single agent, allowed action", () => {
-  it("returns approved=true with allow governance", () => {
+describe("TC-01 — valid single agent, passes structure", () => {
+  it("returns lifecycle_valid=true with governanceRequest and passes schema", () => {
     const proposal = buildActionProposal(base());
 
-    expect(proposal.approved).toBe(true);
     expect(proposal.constraints.lifecycle_valid).toBe(true);
-    expect(proposal.constraints.governance_status).toBe("allow");
-    expect(proposal.reason).toBe("Validation passed and governance allowed");
+    expect(proposal.governanceRequest).toMatchObject({
+      actor: "intent-router",
+      action: "task.route",
+      resource: ["6"],
+    });
+    expect(proposal).not.toHaveProperty("approved");
     expect(validateActionProposal(proposal)).toBe(true);
   });
 });
 
-// ─── TC-02  Governance deny — unknown action ─────────────────────────────────
+// ─── TC-02  Valid multi-agent — structure passes, request forwarded ───────────
 
-describe("TC-02 — governance deny: unknown action", () => {
-  it("returns approved=false, governance_status=deny", () => {
-    const proposal = buildActionProposal(base({ action: "data.delete" }));
+describe("TC-02 — valid multi-agent, structure passes", () => {
+  it("returns lifecycle_valid=true with governanceRequest containing all agents", () => {
+    const proposal = buildActionProposal(base({ agents: ["6", "1"] }));
 
-    expect(proposal.approved).toBe(false);
     expect(proposal.constraints.lifecycle_valid).toBe(true);
-    expect(proposal.constraints.governance_status).toBe("deny");
-    expect(proposal.reason).toBe("Rejected by Layer-2 decision engine");
+    expect(proposal.governanceRequest.resource).toEqual(["6", "1"]);
+    expect(proposal).not.toHaveProperty("approved");
   });
 });
 
-// ─── TC-03  Governance deny — system actor ───────────────────────────────────
+// ─── TC-03  Valid — actor=system, structure passes, request forwarded ─────────
 
-describe("TC-03 — governance deny: actor=system", () => {
-  it("returns approved=false, governance_status=deny", () => {
+describe("TC-03 — actor=system, structure passes", () => {
+  it("returns lifecycle_valid=true — governance decision is not made here", () => {
     const proposal = buildActionProposal(base({ actor: "system" }));
 
-    expect(proposal.approved).toBe(false);
     expect(proposal.constraints.lifecycle_valid).toBe(true);
-    expect(proposal.constraints.governance_status).toBe("deny");
+    expect(proposal.governanceRequest.actor).toBe("system");
+    expect(proposal).not.toHaveProperty("approved");
   });
 });
 
-// ─── TC-04  Governance escalate — multi-agent ────────────────────────────────
+// ─── TC-04  Invalid structure — suspended agent ──────────────────────────────
 
-describe("TC-04 — governance escalate: multiple agents", () => {
-  it("returns approved=false, governance_status=escalate", () => {
-    const proposal = buildActionProposal(
-      base({ agents: ["6", "1"] })
-    );
+describe("TC-04 — invalid structure: suspended agent", () => {
+  it("returns lifecycle_valid=false, no governanceRequest", () => {
+    const proposal = buildActionProposal(base({ agents: ["4"] }));
 
-    expect(proposal.approved).toBe(false);
-    expect(proposal.constraints.lifecycle_valid).toBe(true);
-    expect(proposal.constraints.governance_status).toBe("escalate");
+    expect(proposal.constraints.lifecycle_valid).toBe(false);
+    expect(proposal).not.toHaveProperty("governanceRequest");
+    expect(proposal).not.toHaveProperty("approved");
   });
 });
 
-// ─── TC-05  Invalid structure — suspended agent ──────────────────────────────
+// ─── TC-05  Invalid structure — suspended agent (validateStructure direct) ───
 
-describe("TC-05 — invalid structure: suspended agent", () => {
-  it("returns lifecycle_valid=false, approved=false", () => {
+describe("TC-05 — validateStructure: suspended agent", () => {
+  it("returns valid=false with suspended error", () => {
     const result = validateStructure([
       { id: 4, name: "Document Classifier", lifecycle_state: "Suspended" }
     ]);
@@ -119,8 +116,8 @@ describe("TC-06 — invalid structure: duplicate agents", () => {
 describe("TC-07 — invalid structure: Risk Evaluator → Text Summarizer", () => {
   it("returns lifecycle_valid=false with chaining error", () => {
     const result = validateStructure([
-      { id: 3, name: "Risk Evaluator",   lifecycle_state: "Active" },
-      { id: 1, name: "Text Summarizer",  lifecycle_state: "Active" },
+      { id: 3, name: "Risk Evaluator",  lifecycle_state: "Active" },
+      { id: 1, name: "Text Summarizer", lifecycle_state: "Active" },
     ]);
 
     expect(result.valid).toBe(false);
@@ -135,8 +132,8 @@ describe("TC-07 — invalid structure: Risk Evaluator → Text Summarizer", () =
 describe("TC-08 — invalid structure: Workflow Router → Data Formatter", () => {
   it("returns lifecycle_valid=false with chaining error", () => {
     const result = validateStructure([
-      { id: 6, name: "Workflow Router",  lifecycle_state: "Active" },
-      { id: 2, name: "Data Formatter",   lifecycle_state: "Active" },
+      { id: 6, name: "Workflow Router", lifecycle_state: "Active" },
+      { id: 2, name: "Data Formatter",  lifecycle_state: "Active" },
     ]);
 
     expect(result.valid).toBe(false);
@@ -149,29 +146,27 @@ describe("TC-08 — invalid structure: Workflow Router → Data Formatter", () =
 // ─── TC-09  Agent not found in registry ──────────────────────────────────────
 
 describe("TC-09 — agent not found in registry", () => {
-  it("returns approved=false, reason=Agent not found in registry", () => {
+  it("returns lifecycle_valid=false, reason=Agent not found in registry", () => {
     const proposal = buildActionProposal(base({ agents: ["999"] }));
 
-    expect(proposal.approved).toBe(false);
     expect(proposal.constraints.lifecycle_valid).toBe(false);
-    expect(proposal.constraints.governance_status).toBe("deny");
     expect(proposal.reason).toBe("Agent not found in registry");
+    expect(proposal).not.toHaveProperty("approved");
   });
 });
 
-// ─── TC-10  Empty agents array ───────────────────────────────────────────────
+// ─── TC-10  buildGovernanceRequest — pure passthrough ────────────────────────
 
-describe("TC-10 — empty agents array", () => {
-  it("passes structure (no violations), governance denies unknown action default", () => {
-    const structureResult = validateStructure([]);
-    expect(structureResult.valid).toBe(true);
-
-    const govResult = simulateGovernance({
+describe("TC-10 — buildGovernanceRequest is a pure passthrough", () => {
+  it("returns the exact fields with no response or decision", () => {
+    const req = buildGovernanceRequest({
       actor: "intent-router",
-      action: "unknown.action",
-      resource: [],
+      action: "task.route",
+      resource: ["6"],
       context: {},
     });
-    expect(govResult.response).toBe("deny");
+
+    expect(req).toEqual({ actor: "intent-router", action: "task.route", resource: ["6"], context: {} });
+    expect(req).not.toHaveProperty("response");
   });
 });

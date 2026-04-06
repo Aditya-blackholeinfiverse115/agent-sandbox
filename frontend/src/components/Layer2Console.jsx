@@ -1,24 +1,14 @@
 import { buildActionProposal } from "../layer2/ActionProposal";
 import { validateStructure } from "../layer2/StructuralValidator";
-import { simulateGovernance } from "../layer2/GovernanceHandshake";
 import { RegistryInterface } from "../registry/RegistryInterface";
 import { intentRouterOutput } from "../layer2/intentRouterMock";
 
 export default function Layer2Console() {
-
-  // Consuming Aditya Sawant's intent router output (mocked until live integration)
   const input = intentRouterOutput;
 
   const validation = validateStructure(
     input.agents.map(id => RegistryInterface.getAgentById(id)).filter(Boolean)
   );
-
-  const governance = simulateGovernance({
-    actor: input.actor,
-    action: input.action,
-    resource: input.agents,
-    context: input.context
-  });
 
   const proposal = buildActionProposal(input);
 
@@ -68,14 +58,6 @@ export default function Layer2Console() {
           background: #070c14;
           overflow-x: auto;
         }
-
-        .layer2-response {
-          padding: 12px 14px;
-          font-size: 12px;
-          font-family: monospace;
-          color: #38bdf8;
-          background: #070c14;
-        }
       `}</style>
 
       <div className="layer2-console">
@@ -88,15 +70,7 @@ export default function Layer2Console() {
           {JSON.stringify(validation, null, 2)}
         </Section>
 
-        <Section title="GOVERNANCE REQUEST">
-          {JSON.stringify(governance.request, null, 2)}
-        </Section>
-
-        <Response title="GOVERNANCE RESPONSE">
-          {governance.response}
-        </Response>
-
-        <Section title="FINAL ACTION PROPOSAL">
+        <Section title="ACTION PROPOSAL (GOVERNANCE REQUEST)">
           {JSON.stringify(proposal, null, 2)}
         </Section>
 
@@ -110,15 +84,6 @@ function Section({ title, children }) {
     <div className="layer2-section">
       <div className="layer2-section-title">{title}</div>
       <pre className="layer2-pre">{children}</pre>
-    </div>
-  );
-}
-
-function Response({ title, children }) {
-  return (
-    <div className="layer2-section">
-      <div className="layer2-section-title">{title}</div>
-      <div className="layer2-response">{children}</div>
     </div>
   );
 }
