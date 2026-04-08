@@ -41,6 +41,7 @@ function base(overrides = {}) {
 describe("TC-01 — valid single agent, passes structure", () => {
   it("returns traceability fields, lifecycle_valid=true, passes schema", () => {
     const proposal = buildActionProposal(base());
+    const result   = validateActionProposal(proposal);
 
     expect(proposal.proposal_id).toMatch(/^ap-/);
     expect(proposal.timestamp).toBe(FIXED_TIMESTAMP);
@@ -54,7 +55,8 @@ describe("TC-01 — valid single agent, passes structure", () => {
     expect(proposal.governance_request).not.toHaveProperty("response");
     expect(proposal).not.toHaveProperty("approved");
     expect(proposal).not.toHaveProperty("reason");
-    expect(validateActionProposal(proposal)).toBe(true);
+    expect(result.valid).toBe(true);
+    expect(result.errors).toHaveLength(0);
   });
 });
 
@@ -63,12 +65,14 @@ describe("TC-01 — valid single agent, passes structure", () => {
 describe("TC-02 — valid multi-agent, structure passes", () => {
   it("returns lifecycle_valid=true with governance_request containing all agents", () => {
     const proposal = buildActionProposal(base({ agents: ["6", "1"] }));
+    const result   = validateActionProposal(proposal);
 
     expect(proposal.constraints.lifecycle_valid).toBe(true);
     expect(proposal.governance_request.resource).toEqual(["6", "1"]);
     expect(proposal).not.toHaveProperty("approved");
     expect(proposal).not.toHaveProperty("reason");
-    expect(validateActionProposal(proposal)).toBe(true);
+    expect(result.valid).toBe(true);
+    expect(result.errors).toHaveLength(0);
   });
 });
 
@@ -77,20 +81,23 @@ describe("TC-02 — valid multi-agent, structure passes", () => {
 describe("TC-03 — actor=system, structure passes", () => {
   it("returns lifecycle_valid=true — governance decision is not made here", () => {
     const proposal = buildActionProposal(base({ actor: "system" }));
+    const result   = validateActionProposal(proposal);
 
     expect(proposal.constraints.lifecycle_valid).toBe(true);
     expect(proposal.governance_request.actor).toBe("system");
     expect(proposal).not.toHaveProperty("approved");
     expect(proposal).not.toHaveProperty("reason");
-    expect(validateActionProposal(proposal)).toBe(true);
+    expect(result.valid).toBe(true);
+    expect(result.errors).toHaveLength(0);
   });
 });
 
 // ─── TC-04  Suspended agent ───────────────────────────────────────────────────
 
 describe("TC-04 — invalid structure: suspended agent", () => {
-  it("returns traceability fields, lifecycle_valid=false, governance_request=null", () => {
+  it("returns traceability fields, lifecycle_valid=false, governance_request=null, passes schema", () => {
     const proposal = buildActionProposal(base({ agents: ["4"] }));
+    const result   = validateActionProposal(proposal);
 
     expect(proposal.proposal_id).toMatch(/^ap-/);
     expect(proposal.timestamp).toBe(FIXED_TIMESTAMP);
@@ -99,7 +106,8 @@ describe("TC-04 — invalid structure: suspended agent", () => {
     expect(proposal.governance_request).toBeNull();
     expect(proposal).not.toHaveProperty("approved");
     expect(proposal).not.toHaveProperty("reason");
-    expect(validateActionProposal(proposal)).toBe(true);
+    expect(result.valid).toBe(true);
+    expect(result.errors).toHaveLength(0);
   });
 });
 
@@ -123,7 +131,7 @@ describe("TC-05 — validateStructure: suspended agent", () => {
 
 describe("TC-06 — invalid structure: duplicate agents", () => {
   it("returns valid=false with DUPLICATE_AGENTS error code", () => {
-    const agent = { id: 1, name: "Text Summarizer", lifecycle_state: "Active" };
+    const agent  = { id: 1, name: "Text Summarizer", lifecycle_state: "Active" };
     const result = validateStructure([agent, agent]);
 
     expect(result.valid).toBe(false);
@@ -171,8 +179,9 @@ describe("TC-08 — invalid structure: Workflow Router → Data Formatter", () =
 // ─── TC-09  Agent not found in registry ──────────────────────────────────────
 
 describe("TC-09 — agent not found in registry", () => {
-  it("returns traceability fields, lifecycle_valid=false, governance_request=null", () => {
+  it("returns traceability fields, lifecycle_valid=false, governance_request=null, passes schema", () => {
     const proposal = buildActionProposal(base({ agents: ["999"] }));
+    const result   = validateActionProposal(proposal);
 
     expect(proposal.proposal_id).toMatch(/^ap-/);
     expect(proposal.timestamp).toBe(FIXED_TIMESTAMP);
@@ -181,7 +190,8 @@ describe("TC-09 — agent not found in registry", () => {
     expect(proposal.governance_request).toBeNull();
     expect(proposal).not.toHaveProperty("approved");
     expect(proposal).not.toHaveProperty("reason");
-    expect(validateActionProposal(proposal)).toBe(true);
+    expect(result.valid).toBe(true);
+    expect(result.errors).toHaveLength(0);
   });
 });
 
@@ -213,5 +223,115 @@ describe("TC-11 — buildGovernanceRequest is a pure passthrough", () => {
 
     expect(req).toEqual({ actor: "intent-router", action: "task.route", resource: ["6"], context: {} });
     expect(req).not.toHaveProperty("response");
+  });
+});
+
+// ─── TC-12  MISSING_FIELD — required field absent ────────────────────────────
+
+describe("TC-12 — MISSING_FIELD: required field absent", () => {
+  it("returns MISSING_FIELD error for missing actor", () => {
+    const proposal = buildActionProposal(base());
+    const { actor: _removed, ...withoutActor } = proposal;
+    const result = validateActionProposal(withoutActor);
+
+    expect(result.valid).toBe(false);
+    expect(result.errors).toContainEqual({
+      code: "MISSING_FIELD",
+      field: "actor",
+      message: "Required field \"actor\" is missing",
+    });
+  });
+
+  it("returns MISSING_FIELD error for missing governance_request", () => {
+    const proposal = buildActionProposal(base());
+    const { governance_request: _removed, ...withoutGR } = proposal;
+    const result = validateActionProposal(withoutGR);
+
+    expect(result.valid).toBe(false);
+    expect(result.errors).toContainEqual({
+      code: "MISSING_FIELD",
+      field: "governance_request",
+      message: "Required field \"governance_request\" is missing",
+    });
+  });
+});
+
+// ─── TC-13  FORBIDDEN_FIELD — decision fields rejected ───────────────────────
+
+describe("TC-13 — FORBIDDEN_FIELD: decision fields rejected", () => {
+  it("returns FORBIDDEN_FIELD error for approved", () => {
+    const proposal = { ...buildActionProposal(base()), approved: true };
+    const result   = validateActionProposal(proposal);
+
+    expect(result.valid).toBe(false);
+    expect(result.errors).toContainEqual({
+      code: "FORBIDDEN_FIELD",
+      field: "approved",
+      message: "Field \"approved\" is not permitted — no decision fields allowed",
+    });
+  });
+
+  it("returns FORBIDDEN_FIELD error for reason", () => {
+    const proposal = { ...buildActionProposal(base()), reason: "some reason" };
+    const result   = validateActionProposal(proposal);
+
+    expect(result.valid).toBe(false);
+    expect(result.errors).toContainEqual({
+      code: "FORBIDDEN_FIELD",
+      field: "reason",
+      message: "Field \"reason\" is not permitted — no decision fields allowed",
+    });
+  });
+});
+
+// ─── TC-14  UNKNOWN_FIELD — extra fields rejected ────────────────────────────
+
+describe("TC-14 — UNKNOWN_FIELD: extra fields rejected", () => {
+  it("returns UNKNOWN_FIELD error for unrecognised field", () => {
+    const proposal = { ...buildActionProposal(base()), extra_field: "surprise" };
+    const result   = validateActionProposal(proposal);
+
+    expect(result.valid).toBe(false);
+    expect(result.errors).toContainEqual({
+      code: "UNKNOWN_FIELD",
+      field: "extra_field",
+      message: "Unknown field \"extra_field\" is not part of the contract",
+    });
+  });
+});
+
+// ─── TC-15  INVALID_TYPE — wrong type on required field ──────────────────────
+
+describe("TC-15 — INVALID_TYPE: wrong type on required field", () => {
+  it("returns INVALID_TYPE error when agents is not an array", () => {
+    const proposal = { ...buildActionProposal(base()), agents: "not-an-array" };
+    const result   = validateActionProposal(proposal);
+
+    expect(result.valid).toBe(false);
+    expect(result.errors).toContainEqual({
+      code: "INVALID_TYPE",
+      field: "agents",
+      message: "Must be an array",
+    });
+  });
+});
+
+// ─── TC-16  INVALID_GOVERNANCE_REQUEST — response field rejected ─────────────
+
+describe("TC-16 — INVALID_GOVERNANCE_REQUEST: response field inside governance_request", () => {
+  it("returns FORBIDDEN_FIELD error for governance_request.response", () => {
+    const proposal = buildActionProposal(base());
+    const tampered = {
+      ...proposal,
+      governance_request: { ...proposal.governance_request, response: "allow" },
+    };
+    const result = validateActionProposal(tampered);
+
+    expect(result.valid).toBe(false);
+    expect(result.errors).toContainEqual({
+      code: "FORBIDDEN_FIELD",
+      field: "governance_request.response",
+      message: "Field \"response\" is not permitted inside governance_request",
+    });
   });
 });
