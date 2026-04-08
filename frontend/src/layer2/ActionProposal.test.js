@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { buildActionProposal } from "./ActionProposal.js";
+import { buildActionProposal, CONTRACT_VERSION } from "./ActionProposal.js";
 import { validateStructure } from "./StructuralValidator.js";
 import { buildGovernanceRequest } from "./GovernanceHandshake.js";
 import { validateActionProposal } from "./validateActionProposal.js";
@@ -23,12 +23,15 @@ vi.mock("../registry/RegistryInterface.js", () => ({
 
 beforeEach(() => vi.clearAllMocks());
 
+const FIXED_TIMESTAMP = "2025-01-01T00:00:00.000Z";
+
 function base(overrides = {}) {
   return {
     actor: "intent-router",
     action: "task.route",
     agents: ["6"],
     context: { task: "summarize-and-format" },
+    _timestamp: FIXED_TIMESTAMP,
     ...overrides,
   };
 }
@@ -36,9 +39,12 @@ function base(overrides = {}) {
 // ─── TC-01  Valid case ───────────────────────────────────────────────────────
 
 describe("TC-01 — valid single agent, passes structure", () => {
-  it("returns lifecycle_valid=true with governance_request and passes schema", () => {
+  it("returns traceability fields, lifecycle_valid=true, passes schema", () => {
     const proposal = buildActionProposal(base());
 
+    expect(proposal.proposal_id).toMatch(/^ap-/);
+    expect(proposal.timestamp).toBe(FIXED_TIMESTAMP);
+    expect(proposal.contract_version).toBe(CONTRACT_VERSION);
     expect(proposal.constraints.lifecycle_valid).toBe(true);
     expect(proposal.governance_request).toMatchObject({
       actor: "intent-router",
@@ -52,7 +58,7 @@ describe("TC-01 — valid single agent, passes structure", () => {
   });
 });
 
-// ─── TC-02  Valid multi-agent — structure passes, request forwarded ───────────
+// ─── TC-02  Valid multi-agent ─────────────────────────────────────────────────
 
 describe("TC-02 — valid multi-agent, structure passes", () => {
   it("returns lifecycle_valid=true with governance_request containing all agents", () => {
@@ -66,7 +72,7 @@ describe("TC-02 — valid multi-agent, structure passes", () => {
   });
 });
 
-// ─── TC-03  Valid — actor=system, structure passes, request forwarded ─────────
+// ─── TC-03  actor=system ──────────────────────────────────────────────────────
 
 describe("TC-03 — actor=system, structure passes", () => {
   it("returns lifecycle_valid=true — governance decision is not made here", () => {
@@ -80,12 +86,15 @@ describe("TC-03 — actor=system, structure passes", () => {
   });
 });
 
-// ─── TC-04  Invalid structure — suspended agent ──────────────────────────────
+// ─── TC-04  Suspended agent ───────────────────────────────────────────────────
 
 describe("TC-04 — invalid structure: suspended agent", () => {
-  it("returns lifecycle_valid=false, governance_request=null", () => {
+  it("returns traceability fields, lifecycle_valid=false, governance_request=null", () => {
     const proposal = buildActionProposal(base({ agents: ["4"] }));
 
+    expect(proposal.proposal_id).toMatch(/^ap-/);
+    expect(proposal.timestamp).toBe(FIXED_TIMESTAMP);
+    expect(proposal.contract_version).toBe(CONTRACT_VERSION);
     expect(proposal.constraints.lifecycle_valid).toBe(false);
     expect(proposal.governance_request).toBeNull();
     expect(proposal).not.toHaveProperty("approved");
@@ -94,7 +103,7 @@ describe("TC-04 — invalid structure: suspended agent", () => {
   });
 });
 
-// ─── TC-05  Invalid structure — suspended agent (validateStructure direct) ───
+// ─── TC-05  validateStructure: suspended agent ────────────────────────────────
 
 describe("TC-05 — validateStructure: suspended agent", () => {
   it("returns valid=false with AGENT_SUSPENDED error code", () => {
@@ -110,7 +119,7 @@ describe("TC-05 — validateStructure: suspended agent", () => {
   });
 });
 
-// ─── TC-06  Invalid structure — duplicate agents ─────────────────────────────
+// ─── TC-06  Duplicate agents ──────────────────────────────────────────────────
 
 describe("TC-06 — invalid structure: duplicate agents", () => {
   it("returns valid=false with DUPLICATE_AGENTS error code", () => {
@@ -125,7 +134,7 @@ describe("TC-06 — invalid structure: duplicate agents", () => {
   });
 });
 
-// ─── TC-07  Invalid structure — Risk Evaluator → Text Summarizer ─────────────
+// ─── TC-07  Risk Evaluator → Text Summarizer ─────────────────────────────────
 
 describe("TC-07 — invalid structure: Risk Evaluator → Text Summarizer", () => {
   it("returns valid=false with INVALID_CHAIN error code", () => {
@@ -142,7 +151,7 @@ describe("TC-07 — invalid structure: Risk Evaluator → Text Summarizer", () =
   });
 });
 
-// ─── TC-08  Invalid structure — Workflow Router → Data Formatter ─────────────
+// ─── TC-08  Workflow Router → Data Formatter ──────────────────────────────────
 
 describe("TC-08 — invalid structure: Workflow Router → Data Formatter", () => {
   it("returns valid=false with INVALID_CHAIN error code", () => {
@@ -162,9 +171,12 @@ describe("TC-08 — invalid structure: Workflow Router → Data Formatter", () =
 // ─── TC-09  Agent not found in registry ──────────────────────────────────────
 
 describe("TC-09 — agent not found in registry", () => {
-  it("returns lifecycle_valid=false, governance_request=null", () => {
+  it("returns traceability fields, lifecycle_valid=false, governance_request=null", () => {
     const proposal = buildActionProposal(base({ agents: ["999"] }));
 
+    expect(proposal.proposal_id).toMatch(/^ap-/);
+    expect(proposal.timestamp).toBe(FIXED_TIMESTAMP);
+    expect(proposal.contract_version).toBe(CONTRACT_VERSION);
     expect(proposal.constraints.lifecycle_valid).toBe(false);
     expect(proposal.governance_request).toBeNull();
     expect(proposal).not.toHaveProperty("approved");
@@ -173,9 +185,24 @@ describe("TC-09 — agent not found in registry", () => {
   });
 });
 
-// ─── TC-10  buildGovernanceRequest — pure passthrough ────────────────────────
+// ─── TC-10  proposal_id determinism ──────────────────────────────────────────
 
-describe("TC-10 — buildGovernanceRequest is a pure passthrough", () => {
+describe("TC-10 — proposal_id is deterministic", () => {
+  it("same input always produces same proposal_id", () => {
+    const input = base();
+    expect(buildActionProposal(input).proposal_id).toBe(buildActionProposal(input).proposal_id);
+  });
+
+  it("different agents produce different proposal_id", () => {
+    const id1 = buildActionProposal(base({ agents: ["6"] })).proposal_id;
+    const id2 = buildActionProposal(base({ agents: ["1", "2"] })).proposal_id;
+    expect(id1).not.toBe(id2);
+  });
+});
+
+// ─── TC-11  buildGovernanceRequest — pure passthrough ────────────────────────
+
+describe("TC-11 — buildGovernanceRequest is a pure passthrough", () => {
   it("returns the exact fields with no response or decision", () => {
     const req = buildGovernanceRequest({
       actor: "intent-router",

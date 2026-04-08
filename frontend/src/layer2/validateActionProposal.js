@@ -1,4 +1,7 @@
 export function validateActionProposal(proposal) {
+  if (typeof proposal.proposal_id !== "string") return false;
+  if (typeof proposal.timestamp !== "string") return false;
+  if (typeof proposal.contract_version !== "string") return false;
   if (typeof proposal.actor !== "string") return false;
   if (typeof proposal.action !== "string") return false;
   if (!Array.isArray(proposal.agents)) return false;
