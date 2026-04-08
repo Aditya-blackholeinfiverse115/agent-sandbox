@@ -8,6 +8,7 @@ const REQUIRED_FIELDS = [
   "sequence",
   "constraints",
   "context",
+  "failure",
   "governance_request",
 ];
 
@@ -77,7 +78,31 @@ export function validateActionProposal(proposal) {
   if ("context" in proposal && (typeof proposal.context !== "object" || Array.isArray(proposal.context)))
     errors.push(err("INVALID_TYPE", "context", "Must be an object"));
 
-  // 5. governance_request — must exist, must be null or valid shape
+  // 5. failure — must be null when valid, structured object when invalid
+  if ("failure" in proposal && "constraints" in proposal) {
+    const isInvalid = proposal.constraints.lifecycle_valid === false;
+    const f = proposal.failure;
+
+    if (isInvalid) {
+      if (f === null)
+        errors.push(err("MISSING_FIELD", "failure", "failure must be a structured object when lifecycle_valid is false"));
+      else if (typeof f !== "object" || Array.isArray(f))
+        errors.push(err("INVALID_TYPE", "failure", "Must be an object"));
+      else {
+        if (typeof f.stage !== "string")
+          errors.push(err("INVALID_TYPE", "failure.stage", "Must be a string"));
+        if (!Array.isArray(f.codes))
+          errors.push(err("INVALID_TYPE", "failure.codes", "Must be an array"));
+        if (typeof f.message !== "string")
+          errors.push(err("INVALID_TYPE", "failure.message", "Must be a string"));
+      }
+    } else {
+      if (f !== null)
+        errors.push(err("INVALID_TYPE", "failure", "failure must be null when lifecycle_valid is true"));
+    }
+  }
+
+  // 6. governance_request — must exist, must be null or valid shape
   if ("governance_request" in proposal) {
     const gr = proposal.governance_request;
 

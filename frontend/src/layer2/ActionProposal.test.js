@@ -95,7 +95,7 @@ describe("TC-03 — actor=system, structure passes", () => {
 // ─── TC-04  Suspended agent ───────────────────────────────────────────────────
 
 describe("TC-04 — invalid structure: suspended agent", () => {
-  it("returns traceability fields, lifecycle_valid=false, governance_request=null, passes schema", () => {
+  it("returns traceability fields, lifecycle_valid=false, failure populated, governance_request=null", () => {
     const proposal = buildActionProposal(base({ agents: ["4"] }));
     const result   = validateActionProposal(proposal);
 
@@ -103,6 +103,11 @@ describe("TC-04 — invalid structure: suspended agent", () => {
     expect(proposal.timestamp).toBe(FIXED_TIMESTAMP);
     expect(proposal.contract_version).toBe(CONTRACT_VERSION);
     expect(proposal.constraints.lifecycle_valid).toBe(false);
+    expect(proposal.failure).toEqual({
+      stage: "STRUCTURAL_VALIDATION",
+      codes: ["AGENT_SUSPENDED"],
+      message: "Suspended agent detected: 4",
+    });
     expect(proposal.governance_request).toBeNull();
     expect(proposal).not.toHaveProperty("approved");
     expect(proposal).not.toHaveProperty("reason");
@@ -179,7 +184,7 @@ describe("TC-08 — invalid structure: Workflow Router → Data Formatter", () =
 // ─── TC-09  Agent not found in registry ──────────────────────────────────────
 
 describe("TC-09 — agent not found in registry", () => {
-  it("returns traceability fields, lifecycle_valid=false, governance_request=null, passes schema", () => {
+  it("returns traceability fields, lifecycle_valid=false, failure populated, governance_request=null", () => {
     const proposal = buildActionProposal(base({ agents: ["999"] }));
     const result   = validateActionProposal(proposal);
 
@@ -187,6 +192,11 @@ describe("TC-09 — agent not found in registry", () => {
     expect(proposal.timestamp).toBe(FIXED_TIMESTAMP);
     expect(proposal.contract_version).toBe(CONTRACT_VERSION);
     expect(proposal.constraints.lifecycle_valid).toBe(false);
+    expect(proposal.failure).toEqual({
+      stage: "REGISTRY_RESOLUTION",
+      codes: ["AGENT_NOT_FOUND"],
+      message: "One or more agent IDs could not be resolved in the registry",
+    });
     expect(proposal.governance_request).toBeNull();
     expect(proposal).not.toHaveProperty("approved");
     expect(proposal).not.toHaveProperty("reason");
@@ -223,6 +233,34 @@ describe("TC-11 — buildGovernanceRequest is a pure passthrough", () => {
 
     expect(req).toEqual({ actor: "intent-router", action: "task.route", resource: ["6"], context: {} });
     expect(req).not.toHaveProperty("response");
+  });
+});
+
+// ─── TC-17  failure — multi-error codes collected ─────────────────────────────
+
+describe("TC-17 — failure.codes contains all structural errors", () => {
+  it("duplicate suspended agents produce both AGENT_SUSPENDED and DUPLICATE_AGENTS codes", () => {
+    // agent 4 is Suspended — using it twice triggers both AGENT_SUSPENDED and DUPLICATE_AGENTS
+    const proposal = buildActionProposal(base({ agents: ["4", "4"] }));
+
+    expect(proposal.constraints.lifecycle_valid).toBe(false);
+    expect(proposal.failure.stage).toBe("STRUCTURAL_VALIDATION");
+    expect(proposal.failure.codes).toContain("AGENT_SUSPENDED");
+    expect(proposal.failure.codes).toContain("DUPLICATE_AGENTS");
+    expect(typeof proposal.failure.message).toBe("string");
+    expect(proposal.governance_request).toBeNull();
+    expect(validateActionProposal(proposal).valid).toBe(true);
+  });
+});
+
+// ─── TC-18  failure — null on valid path ──────────────────────────────────────
+
+describe("TC-18 — failure is null on valid path", () => {
+  it("valid proposal always has failure=null", () => {
+    const proposal = buildActionProposal(base());
+
+    expect(proposal.failure).toBeNull();
+    expect(validateActionProposal(proposal).valid).toBe(true);
   });
 });
 
