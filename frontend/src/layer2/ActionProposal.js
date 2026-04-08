@@ -36,6 +36,19 @@ export function buildActionProposal({ actor, action, agents, context = {}, _time
 
   const resolved = agents.map((id) => RegistryInterface.getAgentById(id));
 
+  if (agents.length === 0) {
+    return {
+      ...base,
+      constraints: { lifecycle_valid: false },
+      failure: buildFailure(
+        "EMPTY_CHAIN",
+        ["EMPTY_AGENT_CHAIN"],
+        "No agents provided — an empty chain cannot be executed"
+      ),
+      governance_request: null,
+    };
+  }
+
   if (resolved.includes(null)) {
     return {
       ...base,

@@ -264,6 +264,25 @@ describe("TC-18 — failure is null on valid path", () => {
   });
 });
 
+// ─── TC-19  Empty chain ─────────────────────────────────────────────────────────
+
+describe("TC-19 — empty agents array is an explicit failure", () => {
+  it("returns lifecycle_valid=false, stage=EMPTY_CHAIN, governance_request=null", () => {
+    const proposal = buildActionProposal(base({ agents: [] }));
+    const result   = validateActionProposal(proposal);
+
+    expect(proposal.constraints.lifecycle_valid).toBe(false);
+    expect(proposal.failure).toEqual({
+      stage: "EMPTY_CHAIN",
+      codes: ["EMPTY_AGENT_CHAIN"],
+      message: "No agents provided — an empty chain cannot be executed",
+    });
+    expect(proposal.governance_request).toBeNull();
+    expect(result.valid).toBe(true);
+    expect(result.errors).toHaveLength(0);
+  });
+});
+
 // ─── TC-12  MISSING_FIELD — required field absent ────────────────────────────
 
 describe("TC-12 — MISSING_FIELD: required field absent", () => {
